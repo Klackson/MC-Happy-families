@@ -153,7 +153,9 @@ def play_turn(hands, pile, player_number, families_scored, verbose=VERBOSE):
 
 def score_family(hands, family, score_guy, families_scored):
     print("Player", score_guy, "scored a family! Family number", family)
-    families_scored[score_guy] += 1
+    families_scored[family,0] = score_guy
+    families_scored[family,1] = np.sum(families_scored[:,0] != -1)
+
     hand = hands[score_guy].copy()
     for card in hand:
         if card[0] == family:
@@ -168,7 +170,8 @@ def is_game_over(hands):
 def play_game(nb_players, verbose=VERBOSE):
     deck = generate_deck()
     hands, pile = deal_hands(deck, nb_players)
-    families_scored = [0] * nb_players
+    families_scored = np.full((params["nb_families"],2), -1)
+    # Row = family, Column 0 = player who scored, Column 1 = order it was scored in
     
     turn = 0
     max_turns = 10e6
@@ -178,7 +181,22 @@ def play_game(nb_players, verbose=VERBOSE):
         turn += 1
         
         if is_game_over(hands) :
-            winner = np.argmax(families_scored)
+
+            # Find the highest score
+            max_score = np.max(families_scored[:,0])
+            
+            # Find all players with the highest score
+            tied_players = np.where(families_scored[:,0] == max_score)[0]
+            
+            if len(tied_players) > 1:
+                # Tiebreak by taking the first to complete a family among tied players
+                # Find the player among tied players who completed a family first
+                earliest_completion = np.argmin(families_scored[tied_players,1])
+                winner = tied_players[earliest_completion]
+            else:
+                # No tie, winner is the one with the highest score
+                winner = tied_players[0]
+            
             if verbose : print("Player", winner, "wins!")
             return winner
             
