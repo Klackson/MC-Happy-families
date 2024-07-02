@@ -47,7 +47,7 @@ def is_family_scored(hands):
             if counts[card[0]] == params["nb_people_per_family"]:
                 return player, card[0]
         player += 1
-    return -1
+    return -1, -1
 
 def ask_human(hands, player_number):
     is_player_valid = False
@@ -158,7 +158,6 @@ def score_family(hands, family, score_guy, families_scored):
     for card in hand:
         if card[0] == family:
             hands[score_guy].remove(card)
-            print("Player", score_guy, "discarded card", card)
 
 def is_game_over(hands):
     for hand in hands:
