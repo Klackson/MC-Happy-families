@@ -1,8 +1,8 @@
 import numpy as np
 import simpleai
 
-params = {"nb_families" : 4, 
-          "nb_people_per_family" : 3,
+params = {"nb_families" : 7, 
+          "nb_people_per_family" : 6,
           "starting_hand_size" : 6,
           "nb_players" : 2}
 
@@ -56,6 +56,10 @@ def ask_human(hands, player_number):
 
         if asked_player > params["nb_players"] or asked_player < 0:
             print("This player doesn't exist")
+            continue
+
+        if asked_player == player_number:
+            print("You cannot ask yourself for a card")
             continue
 
         is_player_valid = len(hands[asked_player])
@@ -123,7 +127,7 @@ def ask(hands, pile, player_number, player_type="Human", AI_choice=None, verbose
 def draw(hands, pile, player_number, verbose = VERBOSE):
     if not len(pile): #If the pile is empty, the player can't draw
         if verbose : print("Player", player_number, "can't draw a card, the pile is empty")
-        return hands, pile
+        return [-1,-1], hands, pile
 
     card = pile.pop(0)
     hands[player_number].append(card)
@@ -148,6 +152,7 @@ def play_turn(hands, pile, player_number, families_scored, verbose=VERBOSE):
 
         if lucky and verbose : print("Player", player_number, "got lucky and can play again")
 
+    print("Turn over")
     return hands, pile
 
 def score_family(hands, family, score_guy, families_scored):
@@ -208,10 +213,8 @@ def play_game(nb_players, verbose=VERBOSE):
     return -1
 
 def compute_scores(families_scored):
-    scores = [np.sum(families_scored[:,0] == i) for i in range(len(families_scored))] # can be made faster
+    scores = [np.sum(families_scored[:,0] == i) for i in range(params["nb_players"])] # can be made faster
     return scores
 
 def main():
     play_game(params["nb_players"])
-
-main()

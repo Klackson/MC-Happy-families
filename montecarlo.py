@@ -3,14 +3,17 @@ import game
 
 params = {"selection_method" : "greedy"}
 
-def assume_game_state(player_number, hands, families_scored):
-    deck = build_remaining_deck(hands, families_scored, player_number)
+VERBOSE = True
+
+def assume_game_state(player_number, hands, families_scored, verbose=VERBOSE):
+    deck = build_remaining_deck(hands, families_scored, player_number, verbose)
 
     hands, pile = deal_other_hands(player_number, deck, hands)
 
     return hands, pile
 
-def build_remaining_deck(hands, families_scored, player_number, verbose = game.VERBOSE):
+def build_remaining_deck(hands, families_scored, player_number, verbose = VERBOSE):
+    print("families scored :",families_scored)
     deck = []
 
     for family in range(game.params["nb_families"]):
@@ -50,16 +53,16 @@ def choose_random(hands, player_number):
         index = np.argmax(counts)
         asked_family = unique[index]
     
-    unowned_family_cards = [i for i in range(len(game.params["nb_people_per_family"])) if [asked_family, i] not in hands[player_number]] # can be made faster
+    unowned_family_cards = [i for i in range(game.params["nb_people_per_family"]) if [asked_family, i] not in hands[player_number]] # can be made faster
     asked_card = np.random.choice(unowned_family_cards)
 
     return asked_player, asked_family, asked_card
 
 
-def ask_random(hands, pile, player_number):
+def ask_random(hands, pile, player_number, verbose=VERBOSE):
     asked_player, asked_family, asked_card = choose_random(hands, player_number)
 
-    if game.VERBOSE : print("Player", player_number, "asks player", asked_player, "for family", asked_family, "and card", asked_card)
+    if verbose : print("Player", player_number, "asks player", asked_player, "for family", asked_family, "and card", asked_card)
 
     asked_hand = hands[asked_player]
     if [asked_family, asked_card] in asked_hand:
@@ -74,14 +77,17 @@ def ask_random(hands, pile, player_number):
     
     hands[player_number].append(card)
 
-    return (card[0] == asked_family, card[1] == asked_card), hands, pile
+    return (card[0] == asked_family and card[1] == asked_card), hands, pile
 
 
-def play_simulation_turn(hands, pile, player_number, families_scored, verbose=game.VERBOSE):
+def play_simulation_turn(hands, pile, player_number, families_scored, verbose=VERBOSE):
+    if len(hands[player_number]) == 0:
+            return hands, pile #Player has no cards, he can't play
+    
     lucky = True
     while lucky:
         print("Your hand :", hands[player_number],"\n")
-        lucky, hands, pile = ask_random(hands, pile, player_number)
+        lucky, hands, pile = ask_random(hands, pile, player_number, verbose)
 
         score_guy, family_scored = game.is_family_scored(hands)
         if score_guy>=0 : 
@@ -95,20 +101,23 @@ def play_simulation_turn(hands, pile, player_number, families_scored, verbose=ga
     return hands, pile
 
 
-def play_simulation_game(player_number, hands, families_scored, verbose=game.VERBOSE):
+def play_simulation(player_number, hands, families_scored, verbose=VERBOSE):
+    if verbose : print("Simulation from player", player_number)
     hands = hands.copy()
     families_scored = families_scored.copy()
 
-    hands, pile = assume_game_state(hands, families_scored, player_number)
+    hands, pile = assume_game_state(player_number, hands, families_scored)
 
     maxturns = 10e5
     turn=0
 
     while not game.is_game_over(hands) and turn < maxturns:
-        for player_number in range(len(hands)):
-            turn+=1
-            hands, pile = play_simulation_turn(hands, pile, player_number, families_scored)
+        playing_player = (player_number+1+turn)%game.params["nb_players"]
+        hands, pile = play_simulation_turn(hands, pile, playing_player, families_scored)
+        turn+=1
 
     scores = game.compute_scores(families_scored)
+
+    if verbose : print("Simulation over, scores :", scores)
 
     return scores
