@@ -96,7 +96,6 @@ def ask_AI(hands, player_number, verbose = VERBOSE):
 def ask(hands, pile, player_number, player_type="Human", AI_choice=None, verbose = VERBOSE):
     if player_types[player_number] == "Human":
         asked_player, asked_family, asked_card = ask_human(hands, player_number)
-        
 
     else :
         # Ensure on the AI side that the choice is feasible
