@@ -181,6 +181,7 @@ def play_game(nb_players, verbose=VERBOSE):
         
         if is_game_over(hands) :
 
+            """
             # Find the highest score
             max_score = np.max(families_scored[:,0])
             
@@ -197,10 +198,18 @@ def play_game(nb_players, verbose=VERBOSE):
                 winner = tied_players[0]
             
             if verbose : print("Player", winner, "wins!")
-            return winner
+            """
+
+            scores = compute_scores(families_scored)
+
+            return scores
             
     if verbose : print('Game over because too long')
     return -1
+
+def compute_scores(families_scored):
+    scores = [np.sum(families_scored[:,0] == i) for i in range(len(families_scored))] # can be made faster
+    return scores
 
 def main():
     play_game(params["nb_players"])
