@@ -1,7 +1,8 @@
 import numpy as np
 import game
+import copy
 
-params = {"selection_method" : "weighted"}
+params = {"selection_method" : "uniform"}
 
 VERBOSE = False
 
@@ -13,7 +14,6 @@ def assume_game_state(player_number, hands, families_scored, verbose=VERBOSE):
     return hands, pile
 
 def build_remaining_deck(hands, families_scored, player_number, verbose = VERBOSE):
-    print("families scored :",families_scored)
     deck = []
 
     for family in range(game.params["nb_families"]):
@@ -28,7 +28,7 @@ def build_remaining_deck(hands, families_scored, player_number, verbose = VERBOS
     return deck
 
 def deal_other_hands(player_number, deck, hands):
-    newhands = hands.copy()
+    newhands = copy.deepcopy(hands)
 
     for i in range(len(hands)):
         if i == player_number: continue
@@ -88,13 +88,13 @@ def ask_random(hands, pile, player_number, verbose=VERBOSE):
 
     asked_hand = hands[asked_player]
     if [asked_family, asked_card] in asked_hand:
-        if game.VERBOSE : print("Player", asked_player, "gives", asked_family, asked_card, "to player", player_number)
+        if verbose : print("Player", asked_player, "gives", asked_family, asked_card, "to player", player_number)
         hands[player_number].append([asked_family, asked_card])
         hands[asked_player].remove([asked_family, asked_card])
         return True, hands, pile
     
     elif len(pile):
-        if game.VERBOSE : print("Player", asked_player, "says 'Go Fish!'")
+        if verbose : print("Player", asked_player, "says 'Go Fish!'")
         card = pile.pop()
         hands[player_number].append(card)
         return (card[0] == asked_family and card[1] == asked_card), hands, pile
@@ -131,6 +131,9 @@ def play_simulation(player_number, hands, pile, families_scored, lucky, verbose=
         playing_player = (starting_player + turn) % game.params["nb_players"]
         hands, pile = play_simulation_turn(hands, pile, playing_player, families_scored, verbose=verbose)
         turn+=1
+
+    if turn == maxturns:
+        if verbose : print("Game over because too long")
 
     scores = game.compute_scores(families_scored)
 

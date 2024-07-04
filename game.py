@@ -6,7 +6,7 @@ params = {"nb_families" : 7,
           "starting_hand_size" : 6,
           "nb_players" : 2}
 
-VERBOSE = True
+VERBOSE = False
 
 player_types = ["Human", "Human"]
 
@@ -40,7 +40,7 @@ def deal_hands(deck, nb_players):
 
 def is_family_scored(hands, families_scored):
     new_families_scored = families_scored.copy()
-    
+
     for player, hand in enumerate(hands):
         counts = np.zeros(params["nb_families"])
         for card in hand:
@@ -149,13 +149,13 @@ def play_turn(hands, pile, player_number, families_scored, verbose=VERBOSE):
         if len(hands[player_number]) == 0:
             return hands, pile #Player has no cards, he can't play
 
-        if lucky and verbose : print("Player", player_number, "got lucky and can play again")
+        if lucky : print("Player", player_number, "got lucky and can play again")
 
     print("Turn over")
     return hands, pile
 
 def score_family(hands, family, score_guy, families_scored):
-    print("Player", score_guy, "scored a family! Family number", family)
+    if VERBOSE : print("Player", score_guy, "scored a family! Family number", family)
     families_scored[family,0] = score_guy
     families_scored[family,1] = np.sum(families_scored[:,0] != -1)
 

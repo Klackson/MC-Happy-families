@@ -21,11 +21,8 @@ def blc(nb_players, verbose=True, randomshit=True):
         turn += 1
 
         if randomshit :
-            move = simpleai.choose_move(hands, 1, families_scored, True)
-            print("Current hand", hands[1])
-            print("Move chosen", move)
-
-            return
+            move = simpleai.choose_move(hands, 1-player, families_scored, False)
+            print("Suggested move :", move)
         
         if game.is_game_over(hands) :
 
