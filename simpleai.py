@@ -1,6 +1,9 @@
 import numpy as np
 import game
 import montecarlo
+import copy
+
+params = {"nb_simulations": 100}
 
 def enumerate_moves(hands, player_number):
     moves = []
@@ -14,18 +17,28 @@ def enumerate_moves(hands, player_number):
                     moves.append((i, family, person))
     return moves
 
-def montecarlosearch(hands, player_number, families_scored, verbose = True):
-    moves = enumerate_moves(hands, player_number) # Enumerate all possible moves
 
-    #TODO
-    #Guess a lot of possible states
-    hands, pile = montecarlo.assume_game_state(player_number, hands, families_scored, verbose)
-    
-    #For each state, play a move and run a simulation
+def choose_move(original_hands, player_number, original_families_scored, verbose = True):
+    static_hands = copy.deepcopy(original_hands)
+    static_families_scored = original_families_scored.copy()
 
-    #Get aggregate scores for all moves
+    moves = enumerate_moves(static_hands, player_number)
 
-    # Choose the best move
+    search_data = np.empty((params["nb_simulations"], len(moves)))
 
-def choose_move(hands, player_number):
-    pass
+    for i in range(params["nb_simulations"]):
+        assumed_hands, assumed_pile = montecarlo.assume_game_state(player_number, static_hands, static_families_scored, verbose=True)
+
+        for j, move in enumerate(moves):
+            lucky, hands, pile = montecarlo.ask_chosen(assumed_hands.copy(), assumed_pile.copy(), player_number, move, verbose=False)
+            hands, families_scored = game.is_family_scored(hands, static_families_scored)
+
+            if len(hands[player_number]) == 0: lucky = False
+            
+            search_data[i,j] = montecarlo.play_simulation(player_number, hands, pile, families_scored, lucky, verbose=False)[player_number] # Only retrieves score for the player for now
+
+    mean_scores = np.mean(search_data, axis=0)
+
+    print("Mean scores :", mean_scores)
+
+    return moves[np.argmax(mean_scores)] # Simplified UCB

@@ -1,6 +1,7 @@
 import montecarlo
 import numpy as np
 import game
+import simpleai
 
 def main():
     blc(2, True, randomshit=True)
@@ -20,7 +21,9 @@ def blc(nb_players, verbose=True, randomshit=True):
         turn += 1
 
         if randomshit :
-            montecarlo.play_simulation(player, hands, families_scored, True)
+            move = simpleai.choose_move(hands, 1, families_scored, True)
+            print("Current hand", hands[1])
+            print("Move chosen", move)
 
             return
         

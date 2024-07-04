@@ -38,16 +38,17 @@ def deal_hands(deck, nb_players):
     return hands, pile
 
 
-def is_family_scored(hands):
-    player = 0
-    for hand in hands:
+def is_family_scored(hands, families_scored):
+    new_families_scored = families_scored.copy()
+    
+    for player, hand in enumerate(hands):
         counts = np.zeros(params["nb_families"])
         for card in hand:
             counts[card[0]] += 1
             if counts[card[0]] == params["nb_people_per_family"]:
-                return player, card[0]
-        player += 1
-    return -1, -1
+                hands, new_families_scored = score_family(hands, card[0], player, families_scored)
+
+    return hands, new_families_scored
 
 def ask_human(hands, player_number):
     is_player_valid = False
@@ -143,9 +144,7 @@ def play_turn(hands, pile, player_number, families_scored, verbose=VERBOSE):
         print("Your hand :", hands[player_number],"\n")
         lucky, hands, pile = ask(hands, pile, player_number)
 
-        score_guy, family_scored = is_family_scored(hands)
-        if score_guy>=0 : 
-            score_family(hands, family_scored, score_guy, families_scored)
+        hands, families_scored = is_family_scored(hands, families_scored)
 
         if len(hands[player_number]) == 0:
             return hands, pile #Player has no cards, he can't play
@@ -164,6 +163,8 @@ def score_family(hands, family, score_guy, families_scored):
     for card in hand:
         if card[0] == family:
             hands[score_guy].remove(card)
+    
+    return hands, families_scored
 
 def is_game_over(hands):
     for hand in hands:
