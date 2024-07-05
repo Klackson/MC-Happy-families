@@ -55,7 +55,12 @@ def choose_random(hands, player_number):
     else :
         raise ValueError("Invalid selection method")
     
+    # card_range = np.arange(game.params["nb_people_per_family"])
+    # owned_family_cards = [card[1] for card in hands[player_number] if card[0] == asked_family]
     unowned_family_cards = [i for i in range(game.params["nb_people_per_family"]) if [asked_family, i] not in hands[player_number]] # can be made faster
+    #unowned_family_cards = np.setdiff1d(card_range, owned_family_cards) 
+    # We could also take a completely random card (possibly owned). Try to see speed/accuracy tradeoff
+
     asked_card = np.random.choice(unowned_family_cards)
 
     return asked_player, asked_family, asked_card

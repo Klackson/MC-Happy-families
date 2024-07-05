@@ -4,7 +4,7 @@ import simpleai
 params = {"nb_families" : 7, 
           "nb_people_per_family" : 6,
           "starting_hand_size" : 6,
-          "nb_players" : 2}
+          "nb_players" : 3}
 
 VERBOSE = False
 

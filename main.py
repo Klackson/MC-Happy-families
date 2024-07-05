@@ -2,11 +2,12 @@ import montecarlo
 import numpy as np
 import game
 import simpleai
+from time import time
 
 def full_auto_game(nb_players):
     deck = game.generate_deck()
     hands, pile = game.deal_hands(deck, nb_players)
-    families_scored = np.full((game.params["nb_families"],2), -1)
+    families_scored = np.full((game.params["nb_families"], nb_players), -1)
     # Row = family, Column 0 = player who scored, Column 1 = order it was scored in
     
     turn = 0
@@ -42,9 +43,18 @@ def full_auto_game(nb_players):
     return game.compute_scores(families_scored)
 
 
+def time_tests():
+    deck = game.generate_deck()
+    hands, pile = game.deal_hands(deck, 2)
+    families_scored = np.full((game.params["nb_families"],2), -1)
+
+    starttime = time()
+    game.is_family_scored(hands, families_scored)
+    print("Time for random move :", time() - starttime)
+
 
 def main():
-    full_auto_game(2)
+    full_auto_game(3)
 
 
 def blc(nb_players, verbose=True, randomshit=True):
