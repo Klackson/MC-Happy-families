@@ -25,6 +25,8 @@ def enumerate_moves(hands, player_number):
 
 
 def choose_move(original_hands, player_number, original_families_scored, verbose = True):
+    starttime = time.time()
+
     static_hands = copy.deepcopy(original_hands)
     static_families_scored = original_families_scored.copy()
 
@@ -46,6 +48,8 @@ def choose_move(original_hands, player_number, original_families_scored, verbose
 
     mean_scores = np.mean(search_data, axis=0)
 
-    print("Mean scores :", mean_scores)
+    if verbose : print("Mean scores :", mean_scores)
+
+    print("Runtime :", time.time() - starttime)
 
     return moves[np.argmax(mean_scores)] # Simplified UCB

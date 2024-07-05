@@ -2,7 +2,7 @@ import numpy as np
 import game
 import copy
 
-params = {"selection_method" : "uniform"}
+params = {"selection_method" : "weighted"} # Can be "uniform", "weighted" or "greedy
 
 VERBOSE = False
 
@@ -52,6 +52,8 @@ def choose_random(hands, player_number):
         unique, counts = np.unique(families_in_hand, return_counts=True)
         index = np.argmax(counts)
         asked_family = unique[index]
+    else :
+        raise ValueError("Invalid selection method")
     
     unowned_family_cards = [i for i in range(game.params["nb_people_per_family"]) if [asked_family, i] not in hands[player_number]] # can be made faster
     asked_card = np.random.choice(unowned_family_cards)

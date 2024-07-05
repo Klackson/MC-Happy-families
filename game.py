@@ -39,16 +39,16 @@ def deal_hands(deck, nb_players):
 
 
 def is_family_scored(hands, families_scored):
-    new_families_scored = families_scored.copy()
+    #new_families_scored = families_scored.copy()
 
     for player, hand in enumerate(hands):
         counts = np.zeros(params["nb_families"])
         for card in hand:
             counts[card[0]] += 1
             if counts[card[0]] == params["nb_people_per_family"]:
-                hands, new_families_scored = score_family(hands, card[0], player, families_scored)
+                hands, families_scored = score_family(hands, card[0], player, families_scored)
 
-    return hands, new_families_scored
+    return hands, families_scored
 
 def ask_human(hands, player_number):
     is_player_valid = False
@@ -94,17 +94,14 @@ def ask_human(hands, player_number):
 
     return asked_player, asked_family, asked_card
 
-def ask_AI(hands, player_number, verbose = VERBOSE):
-    if player_types[player_number] == "simple_AI":
-        return simpleai.choose_move(hands, player_number)
 
-def ask(hands, pile, player_number, player_type="Human", AI_choice=None, verbose = VERBOSE):
-    if player_types[player_number] == "Human":
+def ask(hands, pile, player_number, chosen=None, verbose = VERBOSE):
+    if not chosen : # Human player
         asked_player, asked_family, asked_card = ask_human(hands, player_number)
 
     else :
         # Ensure on the AI side that the choice is feasible
-        asked_player, asked_family, asked_card = ask_AI(hands, player_number)
+        asked_player, asked_family, asked_card = chosen
 
     #else : raise ValueError("Invalid player type")
 
