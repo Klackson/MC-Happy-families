@@ -4,7 +4,7 @@ import simpleai
 params = {"nb_families" : 7, 
           "nb_people_per_family" : 6,
           "starting_hand_size" : 6,
-          "nb_players" : 3}
+          "nb_players" : 2}
 
 VERBOSE = False
 
@@ -38,19 +38,9 @@ def deal_hands(deck, nb_players):
     return hands, pile
 
 
-def is_family_scored(hands, families_scored):
-    #new_families_scored = families_scored.copy()
-
-    for player, hand in enumerate(hands):
-        counts = np.zeros(params["nb_families"])
-        for card in hand:
-            counts[card[0]] += 1
-            if counts[card[0]] == params["nb_people_per_family"]:
-                hands, families_scored = score_family(hands, card[0], player, families_scored)
-
-    return hands, families_scored
-
 def ask_human(hands, player_number):
+    print("Your hand :", hands[player_number])
+
     is_player_valid = False
     while not is_player_valid:
         asked_player = int(input("What player do you want to ask?"))
@@ -151,23 +141,38 @@ def play_turn(hands, pile, player_number, families_scored, verbose=VERBOSE):
     print("Turn over")
     return hands, pile
 
-def score_family(hands, family, score_guy, families_scored):
-    if VERBOSE : print("Player", score_guy, "scored a family! Family number", family)
+def is_family_scored(hands, families_scored, card_tracker=None, verbose=False):
+    for player, hand in enumerate(hands):
+        counts = np.zeros(params["nb_families"])
+        for card in hand:
+            counts[card[0]] += 1
+            if counts[card[0]] == params["nb_people_per_family"]:
+                hands, families_scored = score_family(hands, card[0], player, families_scored, card_tracker, verbose)
+
+    return hands, families_scored
+
+def score_family(hands, family, score_guy, families_scored, card_tracker=None, verbose = False):
+    if verbose : print("Player", score_guy, "scored a family! Family number", family)
     families_scored[family,0] = score_guy
     families_scored[family,1] = np.sum(families_scored[:,0] != -1)
 
-    hand = hands[score_guy].copy()
-    for card in hand:
-        if card[0] == family:
-            hands[score_guy].remove(card)
+    for i in range(params["nb_people_per_family"]):
+        hands[score_guy].remove([family, i])
+
+    if isinstance(card_tracker, np.ndarray) :
+        ppl_per_family = card_tracker.shape[1]
+        card_tracker[family, :] = np.full(ppl_per_family, -1)
     
     return hands, families_scored
 
 def is_game_over(hands):
+    non_empty_hands = 0
+
     for hand in hands:
-        if len(hand) > 0:
-            return False
-    return True
+        if len(hand):
+            non_empty_hands +=1
+
+    return non_empty_hands <=1
 
 def play_game(nb_players, verbose=VERBOSE):
     deck = generate_deck()
