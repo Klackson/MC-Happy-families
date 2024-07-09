@@ -38,8 +38,19 @@ def deal_hands(deck, nb_players):
     return hands, pile
 
 
+def present_hand(hands, player_number):
+    print("Your hand :")
+    persons_per_family = [[] for _ in range(params["nb_families"])]
+
+    for card in hands[player_number]:
+        persons_per_family[card[0]].append(card[1])
+
+    for family in range(params["nb_families"]):
+        print("Family", family, ":", persons_per_family[family])
+
+
 def ask_human(hands, player_number):
-    print("Your hand :", hands[player_number])
+    present_hand(hands, player_number)
 
     is_player_valid = False
     while not is_player_valid:

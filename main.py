@@ -1,6 +1,7 @@
 import montecarlo
 import numpy as np
 import game
+import nestedai
 import simpleai
 from time import time
 from copy import deepcopy
@@ -71,7 +72,7 @@ def play_vs_ai():
                 chosen_move = game.ask_human(hands, player)
                 lucky, hands, pile = game.ask(hands, pile, player, chosen = chosen_move, verbose=True)
 
-                hands, families_scored = game.is_family_scored(hands, families_scored, card_tracker)
+                hands, families_scored = game.is_family_scored(hands, families_scored, card_tracker, True)
 
                 if len(hands[player]) == 0:
                     break #Player has no cards, he can't play
@@ -82,10 +83,10 @@ def play_vs_ai():
 
         else:
             while lucky:
-                chosen_move = simpleai.choose_move(hands, player, families_scored, card_tracker = card_tracker, verbose = False)
+                chosen_move = nestedai.choose_move(hands, player, families_scored, card_tracker, verbose = True)
                 lucky, hands, pile = game.ask(hands, pile, player, chosen = chosen_move, verbose=True)
 
-                hands, families_scored = game.is_family_scored(hands, families_scored, card_tracker)
+                hands, families_scored = game.is_family_scored(hands, families_scored, card_tracker, True)
 
                 if len(hands[player]) == 0:
                     break #Player has no cards, he can't play
@@ -117,7 +118,7 @@ def time_tests():
 
 
 def main():
-    full_auto_game()
+    play_vs_ai()
 
 
 def blc(nb_players, verbose=True, randomshit=True):

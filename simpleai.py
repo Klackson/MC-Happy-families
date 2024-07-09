@@ -4,7 +4,8 @@ import montecarlo
 import copy
 import time
 
-params = {"nb_simulations": 100}
+params = {"nb_simulations": 100,
+          "nb_nested_simulations" : 50}
 
 def enumerate_moves(hands, player_number):
     moves = []
@@ -33,7 +34,6 @@ def choose_move(original_hands, player_number, original_families_scored, card_tr
     moves = enumerate_moves(static_hands, player_number)
 
     search_data = np.empty((params["nb_simulations"], len(moves)))
-    opponent_data = np.empty((params["nb_simulations"], len(moves)))
 
     for i in range(params["nb_simulations"]):
         assumed_hands, assumed_pile = montecarlo.assume_game_state(player_number, static_hands, static_families_scored, card_tracker, verbose=False)
@@ -45,15 +45,36 @@ def choose_move(original_hands, player_number, original_families_scored, card_tr
             if len(hands[player_number]) == 0: lucky = False
 
             search_data[i,j] = montecarlo.play_simulation(player_number, hands, pile, families_scored, lucky, verbose=False)[player_number] # Only retrieves score for the player for now
-            opponent_data[i,j] = montecarlo.play_simulation(player_number, hands, pile, families_scored, lucky, verbose=False)[1 - player_number]
-
 
     mean_scores = np.mean(search_data, axis=0)
 
     if verbose : 
         print("Mean scores :", mean_scores)
-        print("Opponent scores :", np.mean(opponent_data, axis=0))
 
     print("Runtime :", time.time() - starttime)
 
     return moves[np.argmax(mean_scores)] # Simplified UCB
+
+
+def best_move_value(original_hands, player_number, original_families_scored, card_tracker):
+    static_hands = copy.deepcopy(original_hands)
+    static_families_scored = original_families_scored.copy()
+
+    moves = enumerate_moves(static_hands, player_number)
+
+    search_data = np.empty((params["nb_nested_simulations"], len(moves)))
+
+    for i in range(params["nb_nested_simulations"]):
+        assumed_hands, assumed_pile = montecarlo.assume_game_state(player_number, static_hands, static_families_scored, card_tracker, verbose=False)
+
+        for j, move in enumerate(moves):
+            lucky, hands, pile = montecarlo.ask_chosen(copy.deepcopy(assumed_hands), assumed_pile.copy(), player_number, move, verbose=False)
+            hands, families_scored = game.is_family_scored(hands, static_families_scored.copy())
+
+            if len(hands[player_number]) == 0: lucky = False
+
+            search_data[i,j] = montecarlo.play_simulation(player_number, hands, pile, families_scored, lucky, verbose=False)[player_number] # Only retrieves score for the player for now
+
+    mean_scores = np.mean(search_data, axis=0)
+
+    return np.max(mean_scores) # Simplified UCB
