@@ -26,7 +26,7 @@ def full_auto_game():
         while lucky:
             print("Your hand :", hands[player])
 
-            chosen_move = simpleai.choose_move(hands, player, families_scored, card_tracker, False)
+            chosen_move = nestedai.choose_move(hands, player, families_scored, card_tracker, True)
             lucky, hands, pile = game.ask(hands, pile, player, chosen = chosen_move, verbose=True)
 
             hands, families_scored = game.is_family_scored(hands, families_scored, card_tracker, True)
@@ -45,6 +45,7 @@ def full_auto_game():
         if game.is_game_over(hands) :
             score = game.compute_scores(families_scored)
             print("Score :",score)
+            print("Game lasted", turn, "turns")
             return score
     
     print('Game over because too long')
@@ -121,7 +122,7 @@ def time_tests():
 
 
 def main():
-    play_vs_ai()
+    full_auto_game()
 
 
 def blc(nb_players, verbose=True, randomshit=True):

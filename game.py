@@ -165,10 +165,9 @@ def is_family_scored(hands, families_scored, card_tracker=None, verbose=False):
 def score_family(hands, family, score_guy, families_scored, card_tracker=None, verbose = False):
     if verbose : print("Player", score_guy, "scored a family! Family number", family)
     families_scored[family,0] = score_guy
-    families_scored[family,1] = np.sum(families_scored[:,0] != -1)
+    # families_scored[family,1] = np.sum(families_scored[:,0] != -1)
 
-    for i in range(params["nb_people_per_family"]):
-        hands[score_guy].remove([family, i])
+    hands[score_guy] = [card for card in hands[score_guy] if card[0] != family]
 
     if isinstance(card_tracker, np.ndarray) :
         ppl_per_family = card_tracker.shape[1]
