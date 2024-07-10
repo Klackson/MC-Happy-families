@@ -51,29 +51,18 @@ def deal_other_hands(player_number, deck, hands, card_tracker):
     return newhands, deck # Deck is the pile since dealt cards have been popped from it
 
 
-def choose_random(hands, player_number):
-    other_players = [i for i in range(len(hands)) if i != player_number]
+def choose_random(hands, hand_counts, player_number):
+    other_players = [i for i in range(hand_counts.shape[0]) if i != player_number]
     asked_player = np.random.choice(other_players)
 
-    families_in_hand = [card[0] for card in hands[player_number]]
+    families_in_hand = [i for i in range(game.params["nb_families"]) if hand_counts[player_number, i]]
     if params["selection_method"]=="weighted": asked_family = np.random.choice(families_in_hand)
     elif params["selection_method"]=="uniform": asked_family = np.random.choice(np.unique(families_in_hand))
-    elif params["selection_method"]=="greedy": 
-        unique, counts = np.unique(families_in_hand, return_counts=True)
-        if not len(counts):
-            print("counts :",counts)
-            print("hand :",hands[player_number])
-            print("families in hand",families_in_hand)
-        index = np.argmax(counts)
-        asked_family = unique[index]
+    elif params["selection_method"]=="greedy": asked_family = np.argmax(hand_counts[player_number])
     else :
         raise ValueError("Invalid selection method")
     
-    # card_range = np.arange(game.params["nb_people_per_family"])
-    # owned_family_cards = [card[1] for card in hands[player_number] if card[0] == asked_family]
-    unowned_family_cards = [i for i in range(game.params["nb_people_per_family"]) if [asked_family, i] not in hands[player_number]] # can be made faster
-    #unowned_family_cards = np.setdiff1d(card_range, owned_family_cards) 
-    # We could also take a completely random card (possibly owned). Try to see speed/accuracy tradeoff
+    unowned_family_cards = [i for i in range(game.params["nb_people_per_family"]) if not hands[player_number, asked_family, i]]
 
     if not len(unowned_family_cards): 
         print("families in hand :", families_in_hand)
@@ -84,6 +73,9 @@ def choose_random(hands, player_number):
     
     asked_card = np.random.choice(unowned_family_cards)
 
+    if asked_player == player_number or not np.sum(hands[player_number, asked_family]) or hands[player_number, asked_family, asked_card]:
+        raise ValueError("Unvalid choice")
+
     return asked_player, asked_family, asked_card
 
 
@@ -91,7 +83,7 @@ def score_family(hands, family, score_guy, families_scored, hand_counts, verbose
     if verbose : print("Player", score_guy, "scored a family! Family number", family)
     families_scored[family,0] = score_guy
     # families_scored[family,1] = np.sum(families_scored[:,0] != -1)
-    hands[score_guy] = [card for card in hands[score_guy] if card[0] != family]
+    hands[score_guy, family] = np.zeros(game.params["nb_people_per_family"])
     hand_counts[score_guy, family] = 0
 
 
@@ -100,17 +92,16 @@ def ask_chosen(hands, pile, player_number, choice, hand_counts, families_scored,
 
     if verbose : print("Player", player_number, "asks player", asked_player, "for family", asked_family, "and card", asked_card)
 
-    asked_hand = hands[asked_player]
-    if [asked_family, asked_card] in asked_hand:
+    if hands[asked_player, asked_family, asked_card] :
         if verbose : print("Player", asked_player, "gives", asked_family, asked_card, "to player", player_number)
         
-        hands[asked_player].remove([asked_family, asked_card])
+        hands[asked_player, asked_family, asked_card] = 0
         hand_counts[asked_player, asked_family] -= 1
 
         if hand_counts[player_number, asked_family] +1 == game.params["nb_people_per_family"]:
             score_family(hands, asked_family, player_number, families_scored, hand_counts, verbose)
         else :
-            hands[player_number].append([asked_family, asked_card])
+            hands[player_number, asked_family, asked_card] = 1
             hand_counts[player_number, asked_family] += 1
 
         return True, hands, pile
@@ -123,7 +114,7 @@ def ask_chosen(hands, pile, player_number, choice, hand_counts, families_scored,
             score_family(hands, card[0], player_number, families_scored, hand_counts, verbose)
         else :
             hand_counts[player_number, card[0]] += 1
-            hands[player_number].append(card)
+            hands[player_number, card[0], card[1]] = 1
 
         return (card[0] == asked_family and card[1] == asked_card), hands, pile
 
@@ -131,12 +122,12 @@ def ask_chosen(hands, pile, player_number, choice, hand_counts, families_scored,
 
 
 def ask_random(hands, pile, player_number, hand_counts, families_scored, verbose=VERBOSE):
-    choice = choose_random(hands, player_number)
+    choice = choose_random(hands, hand_counts, player_number)
 
     return ask_chosen(hands, pile, player_number, choice, hand_counts, families_scored, verbose)
 
 def play_simulation_turn(hands, pile, player_number, families_scored, hand_counts, verbose=VERBOSE):
-    if len(hands[player_number]) == 0:
+    if np.sum(hands[player_number]) == 0:
             return hands, pile #Player has no cards, he can't play
     
     lucky = True
@@ -145,7 +136,7 @@ def play_simulation_turn(hands, pile, player_number, families_scored, hand_count
 
         lucky, hands, pile = ask_random(hands, pile, player_number, hand_counts, families_scored)
 
-        if len(hands[player_number]) == 0:
+        if not np.sum(hands[player_number]):
             return hands, pile #Player has no cards, he can't play
 
         if lucky and verbose : print("Player", player_number, "got lucky and can play again")
@@ -187,13 +178,19 @@ def play_simulation(player_number, hands, pile, families_scored, lucky, verbose=
 
     hand_counts = count_hands(hands)
 
-    while not game.is_game_over(hands) and turn < maxturns:
+    hands = build_binary_hands(hands)
+
+    while not is_game_over(hands) and turn < maxturns:
         playing_player = (starting_player + turn) % game.params["nb_players"]
         hands, pile = play_simulation_turn(hands, pile, playing_player, families_scored, hand_counts, verbose=verbose)
         turn+=1
 
     if turn == maxturns:
-        print("Simulation over because too long")
+        print("hands :",hands)
+        print("hand_counts :",hand_counts)
+        print("pile :",pile)
+        print("faimilies scored :", families_scored)
+        raise ValueError("Simulation over because too long")
 
     scores = game.compute_scores(families_scored)
 

@@ -1,6 +1,6 @@
 import game, montecarlo, numpy as np, time, copy, simpleai
 
-params={"nb_total_simulations":10,
+params={"nb_total_simulations":50,
         "nb_worlds":2
         }
 
@@ -67,6 +67,7 @@ def best_move_value(original_hands, player_number, original_families_scored, car
 
             else :
                 search_data[i,j] = montecarlo.play_simulation(player_number, hands, pile, families_scored, lucky, verbose=False)[player_number]
+            #print("Simulation",i*len(moves)+j,"runtime :",time.time()-starttime,"seconds")
 
     mean_scores = np.mean(search_data, axis=0)
 
