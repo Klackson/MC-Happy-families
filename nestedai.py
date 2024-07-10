@@ -1,10 +1,10 @@
 import game, montecarlo, numpy as np, time, copy, simpleai
 
-params={"nb_total_simulations":50,
-        "nb_nested_simulations":25
+params={"nb_total_simulations":10,
+        "nb_worlds":2
         }
 
-params["nb_worlds"] = params["nb_total_simulations"] // params["nb_nested_simulations"]
+params["nb_nested_simulations"] = params["nb_total_simulations"] // params["nb_worlds"]
 
 def choose_move(original_hands, player_number, original_families_scored, original_card_tracker, verbose = True):
     starttime = time.time()
@@ -44,7 +44,7 @@ def choose_move(original_hands, player_number, original_families_scored, origina
     return moves[np.argmax(mean_scores)]
 
 
-def best_move_value(original_hands, player_number, original_families_scored, card_tracker, return_opponent=False):
+def best_move_value(original_hands, player_number, original_families_scored, card_tracker, return_opponent = False):
     static_hands = copy.deepcopy(original_hands)
     static_families_scored = original_families_scored.copy()
 
@@ -61,10 +61,12 @@ def best_move_value(original_hands, player_number, original_families_scored, car
 
             if len(hands[player_number]) == 0: lucky = False
 
+            starttime= time.time()
             if return_opponent:
                 search_data[i,j] = montecarlo.play_simulation(player_number, hands, pile, families_scored, lucky, verbose=False)[1-player_number]
 
-            search_data[i,j] = montecarlo.play_simulation(player_number, hands, pile, families_scored, lucky, verbose=False)[player_number]
+            else :
+                search_data[i,j] = montecarlo.play_simulation(player_number, hands, pile, families_scored, lucky, verbose=False)[player_number]
 
     mean_scores = np.mean(search_data, axis=0)
 

@@ -76,7 +76,6 @@ def choose_random(hands, player_number):
     # We could also take a completely random card (possibly owned). Try to see speed/accuracy tradeoff
 
     if not len(unowned_family_cards): 
-        raise ValueError("Empty card list, should not happen")
         print("families in hand :", families_in_hand)
         print("chosen family :", asked_family)
         print("player hand :", hands[player_number])
@@ -121,7 +120,7 @@ def ask_chosen(hands, pile, player_number, choice, hand_counts, families_scored,
         card = pile.pop()
         
         if hand_counts[player_number, card[0]] + 1 == game.params["nb_people_per_family"]:
-            score_family(hands, asked_family, player_number, families_scored, hand_counts, verbose)
+            score_family(hands, card[0], player_number, families_scored, hand_counts, verbose)
         else :
             hand_counts[player_number, card[0]] += 1
             hands[player_number].append(card)
@@ -155,16 +154,33 @@ def play_simulation_turn(hands, pile, player_number, families_scored, hand_count
 
 
 def count_hands(hands):
-    hands_count = np.zeros((game.params["nb_players"], game.params["nb_families"]))
+    hand_counts = np.zeros((game.params["nb_players"], game.params["nb_families"]))
 
     for player, hand in enumerate(hands):
         for card in hand:
-            hands_count[player, card[0]] += 1
+            hand_counts[player, card[0]] += 1
 
-    return hands_count
+    return hand_counts
+
+def build_binary_hands(hands):
+    binary_hands = np.zeros((game.params["nb_players"], game.params["nb_families"], game.params["nb_people_per_family"]))
+
+    for player, hand in enumerate(hands):
+        for card in hand:
+            binary_hands[player, card[0], card[1]] = 1
+
+    return binary_hands
+
+def is_game_over(hands):
+    non_empty_hands = 0
+    for player in range(hands.shape[0]):
+        if np.sum(hands[player]) > 0:
+            non_empty_hands += 1
+
+    return non_empty_hands <= 1
 
 def play_simulation(player_number, hands, pile, families_scored, lucky, verbose=VERBOSE):
-    maxturns = 10e3
+    maxturns = 10e4
     turn=0
 
     starting_player = player_number + (not lucky)
@@ -173,10 +189,11 @@ def play_simulation(player_number, hands, pile, families_scored, lucky, verbose=
 
     while not game.is_game_over(hands) and turn < maxturns:
         playing_player = (starting_player + turn) % game.params["nb_players"]
-        hands, pile = play_simulation_turn(hands, pile, playing_player, families_scored, hand_counts , verbose=verbose)
+        hands, pile = play_simulation_turn(hands, pile, playing_player, families_scored, hand_counts, verbose=verbose)
         turn+=1
 
-    if turn == maxturns and verbose : print("Game over because too long")
+    if turn == maxturns:
+        print("Simulation over because too long")
 
     scores = game.compute_scores(families_scored)
 

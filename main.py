@@ -45,7 +45,7 @@ def full_auto_game():
         if game.is_game_over(hands) :
             score = game.compute_scores(families_scored)
             print("Score :",score)
-            print("Game lasted", turn, "turns")
+            print("Game lasted", turn+1, "turns")
             return score
     
     print('Game over because too long')
