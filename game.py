@@ -46,7 +46,7 @@ def present_hand(hands, player_number):
         persons_per_family[card[0]].append(card[1])
 
     for family in range(params["nb_families"]):
-        print("Family", family, ":", persons_per_family[family])
+        print("Family", family, ":", np.sort(persons_per_family[family]))
 
 
 def ask_human(hands, player_number):
@@ -54,7 +54,7 @@ def ask_human(hands, player_number):
 
     is_player_valid = False
     while not is_player_valid:
-        asked_player = int(input("What player do you want to ask?"))
+        asked_player = int(input("What player do you want to ask? "))
 
         if asked_player > params["nb_players"] or asked_player < 0:
             print("This player doesn't exist")
@@ -74,7 +74,7 @@ def ask_human(hands, player_number):
 
     is_family_valid = False
     while not is_family_valid:
-        asked_family = int(input("What family do you want to ask for?"))
+        asked_family = int(input("What family do you want to ask for? "))
         
         if asked_family >= params["nb_families"] or asked_family < 0:
             print("This family doesn't exist")
@@ -87,7 +87,7 @@ def ask_human(hands, player_number):
 
     is_card_valid = False
     while not is_card_valid:
-        asked_card = int(input("What card do you want to ask for?"))
+        asked_card = int(input("What card do you want to ask for? "))
         if asked_card < 0 or asked_card >= params["nb_people_per_family"]:
             print("This card number doesn't exist")
         else:

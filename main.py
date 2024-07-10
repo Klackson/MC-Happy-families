@@ -80,6 +80,9 @@ def play_vs_ai():
                 if lucky : 
                     card_tracker[chosen_move[1], chosen_move[2]] = player
                     print("Player", player, "got lucky and can play again\n")
+            
+            print("Hand after draw :")
+            game.present_hand(hands, player)
 
         else:
             while lucky:
