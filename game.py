@@ -172,6 +172,8 @@ def score_family(hands, family, score_guy, families_scored, card_tracker=None, v
     if isinstance(card_tracker, np.ndarray) :
         ppl_per_family = card_tracker.shape[1]
         card_tracker[family, :] = np.full(ppl_per_family, -1)
+
+    if verbose : print("Score :", compute_scores(families_scored))
     
     return hands, families_scored
 

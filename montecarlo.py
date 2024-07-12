@@ -35,7 +35,7 @@ def deal_other_hands(player_number, deck, hands, card_tracker):
     for family in range(nbfam):
         for person in range(nbppl):
             owner = card_tracker[family, person]
-            if owner > -1:
+            if owner >= 0:
                 newhands[owner].append([family, person])
 
 
@@ -44,7 +44,8 @@ def deal_other_hands(player_number, deck, hands, card_tracker):
             newhands[player_number] = hands[player_number].copy()
             continue
         
-        for _ in range(len(hand) - len(newhands[i])): #Known hand size minus nb of known cards affected to hand
+        nb_added_cards = len(newhands[i])
+        for _ in range(len(hand) - nb_added_cards): #Known hand size minus nb of known cards affected to hand
             card = deck.pop()
             newhands[i].append(card)
     
@@ -170,29 +171,35 @@ def is_game_over(hands):
 
     return non_empty_hands <= 1
 
-def play_simulation(player_number, hands, pile, families_scored, lucky, verbose=VERBOSE):
+def play_simulation(player_number, og_hands, pile, og_families_scored, lucky, verbose=VERBOSE):
     maxturns = 10e4
     turn=0
 
+    used_fam_scores = og_families_scored.copy()
+
     starting_player = player_number + (not lucky)
 
-    hand_counts = count_hands(hands)
+    hand_counts = count_hands(og_hands)
+    og_hand_counts = hand_counts.copy()
 
-    hands = build_binary_hands(hands)
+    hands = build_binary_hands(og_hands)
 
     while not is_game_over(hands) and turn < maxturns:
         playing_player = (starting_player + turn) % game.params["nb_players"]
-        hands, pile = play_simulation_turn(hands, pile, playing_player, families_scored, hand_counts, verbose=verbose)
+        hands, pile = play_simulation_turn(hands, pile, playing_player, used_fam_scores, hand_counts, verbose=verbose)
         turn+=1
 
     if turn == maxturns:
-        print("hands :",hands)
+        print("og hands :",og_hands)
+        print("OG hand counts :",og_hand_counts)
+        print("OG families scores :", og_families_scored)
+        print("--------------------")
         print("hand_counts :",hand_counts)
         print("pile :",pile)
-        print("faimilies scored :", families_scored)
+        print("faimilies scored :", used_fam_scores)
         raise ValueError("Simulation over because too long")
 
-    scores = game.compute_scores(families_scored)
+    scores = game.compute_scores(used_fam_scores)
 
     if verbose : print("Simulation over, scores :", scores)
 

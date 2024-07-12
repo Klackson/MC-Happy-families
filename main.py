@@ -7,7 +7,6 @@ from time import time
 from copy import deepcopy
 
 
-
 def full_auto_game():
     deck = game.generate_deck()
     hands, pile = game.deal_hands(deck, game.params["nb_players"])
@@ -22,24 +21,14 @@ def full_auto_game():
         player = turn % game.params["nb_players"]
 
         lucky = True
-        print("Player", player, "playing")
-        while lucky:
-            print("Your hand :", hands[player])
-
-            chosen_move = nestedai.choose_move(hands, player, families_scored, card_tracker, True)
-            lucky, hands, pile = game.ask(hands, pile, player, chosen = chosen_move, verbose=True)
-
-            hands, families_scored = game.is_family_scored(hands, families_scored, card_tracker, True)
-
-            if len(hands[player]) == 0:
-                break #Player has no cards, he can't play
-
-            if lucky : 
-                print("Player", player, "got lucky and can play again\n")
-                card_tracker[chosen_move[1], chosen_move[2]] = player
+        if not player : 
+            print("Player 0, nested AI, is playing")
+            nestedai.play_turn(hands, pile, player, families_scored, card_tracker, verbose = True)
+        else :
+            print("Player 1, simple AI, is playing")
+            simpleai.play_turn(hands, pile, player, families_scored, card_tracker, verbose = True)
 
         print("Turn over\n")
-
         turn += 1
 
         if game.is_game_over(hands) :
@@ -81,23 +70,9 @@ def play_vs_ai():
                 if lucky : 
                     card_tracker[chosen_move[1], chosen_move[2]] = player
                     print("Player", player, "got lucky and can play again\n")
-            
-            print("Hand after draw :")
-            game.present_hand(hands, player)
 
         else:
-            while lucky:
-                chosen_move = nestedai.choose_move(hands, player, families_scored, card_tracker, verbose = True)
-                lucky, hands, pile = game.ask(hands, pile, player, chosen = chosen_move, verbose=True)
-
-                hands, families_scored = game.is_family_scored(hands, families_scored, card_tracker, True)
-
-                if len(hands[player]) == 0:
-                    break #Player has no cards, he can't play
-
-                if lucky : 
-                    card_tracker[chosen_move[1], chosen_move[2]] = player
-                    print("Player", player, "got lucky and can play again\n")
+            nestedai.play_turn(hands, player, families_scored, card_tracker, verbose = True)
 
         turn += 1
         print("Turn over")

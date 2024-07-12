@@ -48,9 +48,21 @@ def choose_move(original_hands, player_number, original_families_scored, card_tr
 
     mean_scores = np.mean(search_data, axis=0)
 
-    if verbose : 
-        print("Mean scores :", mean_scores)
-
-    print("Runtime :", time.time() - starttime)
+    if verbose : print("Runtime :", time.time() - starttime)
 
     return moves[np.argmax(mean_scores)] # Simplified UCB
+
+def play_turn(hands, pile, player, families_scored, card_tracker, verbose = False):
+    lucky=True
+    while lucky:
+        chosen_move = choose_move(hands, player, families_scored, card_tracker, verbose = verbose)
+        lucky, hands, pile = game.ask(hands, pile, player, chosen = chosen_move, verbose = verbose)
+
+        hands, families_scored = game.is_family_scored(hands, families_scored, card_tracker, verbose)
+
+        if len(hands[player]) == 0:
+            break #Player has no cards, he can't play
+
+        if lucky : 
+            card_tracker[chosen_move[1], chosen_move[2]] = player
+            if verbose : print("Player", player, "got lucky and can play again\n")

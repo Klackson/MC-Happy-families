@@ -1,6 +1,6 @@
 import game, montecarlo, numpy as np, time, copy, simpleai
 
-params={"nb_total_simulations":50,
+params={"nb_total_simulations":20,
         "nb_worlds":2
         }
 
@@ -29,6 +29,10 @@ def choose_move(original_hands, player_number, original_families_scored, origina
             hands, families_scored = game.is_family_scored(hands, static_families_scored.copy(), card_tracker)
 
             if len(hands[player_number]) == 0: lucky = False
+
+            if game.is_game_over(hands):
+                search_data[i,j] = game.compute_scores(families_scored)[player_number]
+                continue
 
             if lucky :
                 search_data[i,j] = best_move_value(hands, player_number, families_scored, card_tracker)
@@ -75,3 +79,18 @@ def best_move_value(original_hands, player_number, original_families_scored, car
         return np.min(mean_scores)
     
     return np.max(mean_scores)
+
+def play_turn(hands, pile, player, families_scored, card_tracker, verbose = False):
+    lucky=True
+    while lucky:
+        chosen_move = choose_move(hands, player, families_scored, card_tracker, verbose = verbose)
+        lucky, hands, pile = game.ask(hands, pile, player, chosen = chosen_move, verbose = verbose)
+
+        hands, families_scored = game.is_family_scored(hands, families_scored, card_tracker, verbose)
+
+        if len(hands[player]) == 0:
+            break #Player has no cards, he can't play
+
+        if lucky : 
+            card_tracker[chosen_move[1], chosen_move[2]] = player
+            if verbose : print("Player", player, "got lucky and can play again\n")
