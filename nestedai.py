@@ -6,39 +6,37 @@ params={"nb_total_simulations":20,
 
 params["nb_nested_simulations"] = params["nb_total_simulations"] // params["nb_worlds"]
 
-def choose_move(original_hands, player_number, original_families_scored, original_card_tracker, verbose = True):
+def choose_move(instance , player_number, verbose = False):
     starttime = time.time()
 
-    static_hands = copy.deepcopy(original_hands)
-    static_families_scored = original_families_scored.copy()
-
-    moves = simpleai.enumerate_moves(static_hands, player_number)
+    moves = simpleai.enumerate_moves(instance, player_number)
 
     search_data = np.empty((params["nb_worlds"], len(moves)))
 
     for i in range(params["nb_worlds"]):
-        assumed_hands, assumed_pile = montecarlo.assume_game_state(player_number, static_hands, static_families_scored, original_card_tracker, verbose=False)
+        assumed_hands, assumed_pile = instance.assume_game_state(player_number)
 
         for j, move in enumerate(moves):
-            card_tracker = original_card_tracker.copy()
-            lucky, hands, pile = game.ask(copy.deepcopy(assumed_hands), assumed_pile.copy(), player_number, chosen = move, verbose=False)
+            re_instance = copy.deepcopy(instance)
+            re_instance.hands = copy.deepcopy(assumed_hands)
+            re_instance.pile = assumed_pile.copy()
+            re_instance.verbose = False
+            re_instance.is_family_scored()
+            lucky = re_instance.ask(player_number, chosen = move)
 
-            if lucky: # Has to be before lucky reset check and family score check which modifies card tracker
-                card_tracker[move[1], move[2]] = player_number
+            re_instance.is_family_scored()
 
-            hands, families_scored = game.is_family_scored(hands, static_families_scored.copy(), card_tracker)
+            if len(re_instance.hands[player_number]) == 0: lucky = False
 
-            if len(hands[player_number]) == 0: lucky = False
-
-            if game.is_game_over(hands):
-                search_data[i,j] = game.compute_scores(families_scored)[player_number]
+            if re_instance.is_game_over():
+                search_data[i,j] = re_instance.compute_scores()[player_number]
                 continue
 
             if lucky :
-                search_data[i,j] = best_move_value(hands, player_number, families_scored, card_tracker)
+                search_data[i,j] = best_move_value(re_instance, player_number)
                 continue
 
-            search_data[i,j] = best_move_value(hands, 1-player_number, families_scored, card_tracker, True) # Only retrieves score for the player for now
+            search_data[i,j] = best_move_value(re_instance, 1-player_number, True) # Only retrieves score for the player for now
 
     if verbose :
         print("Evaluated",len(moves),"moves in", time.time() - starttime, "seconds")
@@ -48,49 +46,26 @@ def choose_move(original_hands, player_number, original_families_scored, origina
     return moves[np.argmax(mean_scores)]
 
 
-def best_move_value(original_hands, player_number, original_families_scored, card_tracker, return_opponent = False):
-    static_hands = copy.deepcopy(original_hands)
-    static_families_scored = original_families_scored.copy()
-
-    moves = simpleai.enumerate_moves(static_hands, player_number)
+def best_move_value(instance , player_number, return_opponent = False):
+    moves = simpleai.enumerate_moves(instance, player_number)
 
     search_data = np.empty((params["nb_nested_simulations"], len(moves)))
 
     for i in range(params["nb_nested_simulations"]):
-        assumed_hands, assumed_pile = montecarlo.assume_game_state(player_number, static_hands, static_families_scored, card_tracker, verbose=False)
-
+        assumed_hands, assumed_pile = instance.assume_game_state(player_number)
+        
         for j, move in enumerate(moves):
-            lucky, hands, pile = game.ask(copy.deepcopy(assumed_hands), assumed_pile.copy(), player_number, chosen = move, verbose=False)
-            hands, families_scored = game.is_family_scored(hands, static_families_scored.copy())
+            simulation = montecarlo.simulation(copy.deepcopy(assumed_hands), copy.deepcopy(assumed_pile), instance.families_scored.copy())
+            lucky = simulation.ask_chosen(player_number, move)
 
-            if len(hands[player_number]) == 0: lucky = False
-
-            starttime= time.time()
             if return_opponent:
-                search_data[i,j] = montecarlo.play_simulation(player_number, hands, pile, families_scored, lucky, verbose=False)[1-player_number]
-
-            else :
-                search_data[i,j] = montecarlo.play_simulation(player_number, hands, pile, families_scored, lucky, verbose=False)[player_number]
-            #print("Simulation",i*len(moves)+j,"runtime :",time.time()-starttime,"seconds")
+                search_data[i,j] = simulation.playout(player_number, lucky)[1-player_number]
+            else:
+                search_data[i,j] = simulation.playout(player_number, lucky)[player_number] 
 
     mean_scores = np.mean(search_data, axis=0)
 
     if return_opponent:
         return np.min(mean_scores)
-    
-    return np.max(mean_scores)
 
-def play_turn(hands, pile, player, families_scored, card_tracker, verbose = False):
-    lucky=True
-    while lucky:
-        chosen_move = choose_move(hands, player, families_scored, card_tracker, verbose = verbose)
-        lucky, hands, pile = game.ask(hands, pile, player, chosen = chosen_move, verbose = verbose)
-
-        hands, families_scored = game.is_family_scored(hands, families_scored, card_tracker, verbose)
-
-        if len(hands[player]) == 0:
-            break #Player has no cards, he can't play
-
-        if lucky : 
-            card_tracker[chosen_move[1], chosen_move[2]] = player
-            if verbose : print("Player", player, "got lucky and can play again\n")
+    return np.max(mean_scores) # Simplified UCB

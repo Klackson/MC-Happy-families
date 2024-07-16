@@ -6,85 +6,6 @@ import simpleai
 from time import time
 from copy import deepcopy
 
-
-def full_auto_game():
-    deck = game.generate_deck()
-    hands, pile = game.deal_hands(deck, game.params["nb_players"])
-    families_scored = np.full((game.params["nb_families"], game.params["nb_players"]), -1)
-    # Row = family, Column 0 = player who scored, Column 1 = order it was scored in
-
-    card_tracker = np.full((game.params["nb_families"], game.params["nb_people_per_family"]), -1)
-    
-    turn = 0
-    max_turns = 10e6
-    while turn < max_turns:
-        player = turn % game.params["nb_players"]
-
-        lucky = True
-        if not player : 
-            print("Player 0, nested AI, is playing")
-            nestedai.play_turn(hands, pile, player, families_scored, card_tracker, verbose = True)
-        else :
-            print("Player 1, simple AI, is playing")
-            simpleai.play_turn(hands, pile, player, families_scored, card_tracker, verbose = True)
-
-        print("Turn over\n")
-        turn += 1
-
-        if game.is_game_over(hands) :
-            score = game.compute_scores(families_scored)
-            print("Score :",score)
-            print("Game lasted", turn+1, "turns")
-            return score
-    
-    print('Game over because too long')
-    return game.compute_scores(families_scored)
-
-
-def play_vs_ai():
-    deck = game.generate_deck()
-    hands, pile = game.deal_hands(deck, 2)
-    families_scored = np.full((game.params["nb_families"], game.params["nb_players"]), -1)
-    # Row = family, Column 0 = player who scored, Column 1 = order it was scored in
-
-    card_tracker = np.full((game.params["nb_families"], game.params["nb_people_per_family"]), -1)
-    
-    turn = 0
-    max_turns = 10e6
-    while turn < max_turns:
-        player = turn % game.params["nb_players"]
-        
-        print("\nPlayer", player, "playing")
-        lucky = True
-
-        if player == 0:
-            while lucky:
-                chosen_move = game.ask_human(hands, player)
-                lucky, hands, pile = game.ask(hands, pile, player, chosen = chosen_move, verbose=True)
-
-                hands, families_scored = game.is_family_scored(hands, families_scored, card_tracker, True)
-
-                if len(hands[player]) == 0:
-                    break #Player has no cards, he can't play
-
-                if lucky : 
-                    card_tracker[chosen_move[1], chosen_move[2]] = player
-                    print("Player", player, "got lucky and can play again\n")
-
-        else:
-            nestedai.play_turn(hands, player, families_scored, card_tracker, verbose = True)
-
-        turn += 1
-        print("Turn over")
-
-        if game.is_game_over(hands) :
-            score = game.compute_scores(families_scored)
-            print("Game over !\nScore :",score)
-            return score
-    
-    print('Game over because too long')
-    return game.compute_scores(families_scored)
-
 def time_tests():
     deck = game.generate_deck()
     hands, pile = game.deal_hands(deck, 2)
@@ -97,32 +18,8 @@ def time_tests():
 
 
 def main():
-    full_auto_game()
+    partie = game.game(["nestedai", "simpleai"], game.params["nb_families"], game.params["nb_people_per_family"], game.params["starting_hand_size"], verbose=True)
 
-
-def blc(nb_players, verbose=True, randomshit=True):
-    deck = game.generate_deck()
-    hands, pile = game.deal_hands(deck, nb_players)
-    families_scored = np.full((game.params["nb_families"],2), -1)
-    # Row = family, Column 0 = player who scored, Column 1 = order it was scored in
-    
-    turn = 0
-    max_turns = 10e6
-    while turn < max_turns:
-        player = turn % nb_players
-        hands, pile = game.play_turn(hands, pile, player, families_scored)
-        turn += 1
-
-        if randomshit :
-            move = simpleai.choose_move(hands, 1-player, families_scored, True)
-            print("Suggested move :", move)
-        
-        if game.is_game_over(hands) :
-            score = game.compute_scores(families_scored)
-
-            return print("actual score :",score)
-            
-    if verbose : print('Game over because too long')
-    return game.compute_scores(families_scored)
+    partie.play_game()
 
 main()
