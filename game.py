@@ -17,6 +17,8 @@ class game:
         self.starting_hand_size = starting_hand_size
         self.verbose = verbose
 
+        self.beliefs = np.ones((self.nb_players, self.nb_families, self.nb_people_per_family))
+
         self.hands, self.pile = self.deal_hands(self.generate_deck())
         self.families_scored = np.full((self.nb_families,2), -1)
         self.card_tracker = np.full((nb_families, nb_people_per_family), -1)
@@ -116,6 +118,15 @@ class game:
 
         if self.verbose : print("Player", player_number, "asks player", asked_player, "for card", asked_card, "in family", asked_family)
 
+        # Naive assumption that the player is not bluffing and doesn't own the card (or probably doesn't)
+        self.beliefs[player_number, asked_family, asked_card] = 0.1
+
+        # Update belief about families held in hand by player
+        unseen_asked_family_cards = [ person for person in range(self.nb_people_per_family) if self.card_tracker[asked_family, person] == -1 #]
+                                     and person != asked_card] # Naive assumption that players can't bluff
+        if unseen_asked_family_cards : 
+            self.beliefs[asked_player, asked_family, unseen_asked_family_cards] += 1/len(unseen_asked_family_cards)
+
         for card in self.hands[asked_player]:
             if card[0] == asked_family and card[1] == asked_card:
                 self.hands[player_number].append(card)
@@ -124,6 +135,9 @@ class game:
                 self.card_tracker[card[0], card[1]] = player_number
                 return True
         
+        #Update belief since asked player doesn't own asked card
+        self.beliefs[asked_player, asked_family, asked_card] = 0
+
         # Otherwise the player draws a card
         card = self.draw(player_number)
         if card[0] == asked_family and card[1] == asked_card: # Lucky draw
@@ -143,8 +157,11 @@ class game:
         if self.verbose : print("Player", player_number, "drew a card")
         return card
     
+
     def play_turn(self, player_number):
         if self.verbose : print("Player", player_number, "playing")
+
+        self.converge_beliefs() # Might wanna do it inside lucky loop
 
         lucky = True
         while lucky:
@@ -157,6 +174,10 @@ class game:
 
             elif self.player_list[player_number].capitalize() == "Nestedai":
                 choice = nestedai.choose_move(self, player_number, verbose = self.verbose)
+                lucky = self.ask(player_number, choice)
+
+            elif self.player_list[player_number].capitalize() == "Smarterai":
+                choice = nestedai.better_choose_move(self, player_number, verbose = self.verbose)
                 lucky = self.ask(player_number, choice)
 
             else:
@@ -214,6 +235,13 @@ class game:
         hands, pile = self.deal_other_hands(player_number, deck)
 
         return hands, pile
+    
+    def assume_game_state_v2(self, player_number):
+        deck = self.build_remaining_deck(player_number)
+
+        hands, pile = self.deal_other_hands_v2(player_number, deck)
+
+        return hands, pile
 
 
     def build_remaining_deck(self, player_number):
@@ -228,8 +256,7 @@ class game:
 
         np.random.shuffle(deck)
         return deck
-
-
+    
     def deal_other_hands(self, player_number, deck):
         newhands = [[] for _ in range(len(self.hands))]
 
@@ -240,15 +267,56 @@ class game:
                 if owner >= 0:
                     newhands[owner].append([family, person])
 
-        for i, hand in enumerate(self.hands):
-            if i == player_number:
+        for player, hand in enumerate(self.hands):
+            if player == player_number:
+                newhands[player_number] = hand.copy()
+                continue
+
+            nb_added_cards = len(newhands[player])
+            for _ in range(len(hand) - nb_added_cards): #Known hand size minus nb of known cards affected to hand
+                card = deck.pop()
+                newhands[player].append(card)
+        
+        return newhands, deck # Deck is the pile since dealt cards have been popped from it
+
+
+
+    def deal_other_hands_v2(self, player_number, deck):
+        newhands = [[] for _ in range(len(self.hands))]
+
+        # First add known cards to hands
+        for family in range(self.nb_families):
+            for person in range(self.nb_people_per_family):
+                owner = self.card_tracker[family, person]
+                if owner >= 0:
+                    newhands[owner].append([family, person])
+
+        for player, hand in enumerate(self.hands):
+            if player == player_number:
                 newhands[player_number] = hand.copy()
                 continue
             
-            nb_added_cards = len(newhands[i])
-            for _ in range(len(hand) - nb_added_cards): #Known hand size minus nb of known cards affected to hand
-                card = deck.pop()
-                newhands[i].append(card)
+            candidate_cards = []
+            candidate_weights = []
+            for card in deck :
+                candidate_cards.append(card)
+                candidate_weights.append(self.beliefs[player, card[0], card[1]])
+
+            nb_added_cards = len(newhands[player])
+            remanining_cards_to_add = len(hand) - nb_added_cards
+
+            p = candidate_weights/np.sum(candidate_weights)
+
+            if p.sum() - 1> 0.001 or p.sum() - 1 < -0.001:
+                print("P :",p)
+                print("Sum :", p.sum())
+                raise ValueError("problem non 1 probability sum")
+
+            added_cards_indices = np.random.choice(len(candidate_cards), remanining_cards_to_add, p = candidate_weights/np.sum(candidate_weights), replace = False)
+            added_cards = [candidate_cards[i] for i in added_cards_indices]
+            for card in added_cards:
+                newhands[player].append(card)
+                deck.remove(card)
         
         return newhands, deck # Deck is the pile since dealt cards have been popped from it
 
@@ -268,3 +336,6 @@ class game:
                 
         if self.verbose : print('Game over because too long')
         return -1
+    
+    def converge_beliefs(self):
+        self.beliefs += 0.1 * (self.beliefs.mean() - self.beliefs)

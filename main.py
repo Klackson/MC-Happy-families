@@ -18,7 +18,7 @@ def time_tests():
 
 
 def main():
-    partie = game.game(["nestedai", "simpleai"], game.params["nb_families"], game.params["nb_people_per_family"], game.params["starting_hand_size"], verbose=True)
+    partie = game.game(["smarterai", "smarterai"], game.params["nb_families"], game.params["nb_people_per_family"], game.params["starting_hand_size"], verbose=True)
 
     partie.play_game()
 

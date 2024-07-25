@@ -2,7 +2,7 @@ import numpy as np
 import game
 from copy import deepcopy
 
-params = {"selection_method" : "greedy"} # Can be "uniform", "weighted" or "greedy
+params = {"selection_method" : "weighted"} # Can be "uniform", "weighted" or "greedy
 
 VERBOSE = False
 
