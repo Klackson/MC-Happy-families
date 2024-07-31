@@ -119,7 +119,7 @@ class game:
         if self.verbose : print("Player", player_number, "asks player", asked_player, "for card", asked_card, "in family", asked_family)
 
         # Naive assumption that the player is not bluffing and doesn't own the card (or probably doesn't)
-        self.beliefs[player_number, asked_family, asked_card] = 0.1
+        self.beliefs[player_number, asked_family, asked_card] = max(0.1, self.beliefs[player_number, asked_family, asked_card] - 0.7)
 
         # Update belief about families held in hand by player
         unseen_asked_family_cards = [ person for person in range(self.nb_people_per_family) if self.card_tracker[asked_family, person] == -1 #]
@@ -159,12 +159,17 @@ class game:
     
 
     def play_turn(self, player_number):
+        if len(self.hands[player_number]) == 0:
+                return #Player has no cards, he can't play
+        
         if self.verbose : print("Player", player_number, "playing")
 
-        self.converge_beliefs() # Might wanna do it inside lucky loop
+        
 
         lucky = True
         while lucky:
+            self.converge_beliefs() # Might wanna do it inside lucky loop
+            
             if self.player_list[player_number].capitalize() == "Human":
                 lucky = self.ask(player_number)
             
@@ -179,14 +184,22 @@ class game:
             elif self.player_list[player_number].capitalize() == "Smarterai":
                 choice = nestedai.better_choose_move(self, player_number, verbose = self.verbose)
                 lucky = self.ask(player_number, choice)
+            
+            elif self.player_list[player_number].capitalize() == "Pimc":
+                choice = simpleai.choose_move_pimc(self, player_number, verbose = self.verbose)
+                lucky = self.ask(player_number, choice)
+
+            elif self.player_list[player_number].capitalize() == "Nested_pimc":
+                choice = nestedai.choose_move_pimc(self, player_number, verbose = self.verbose)
+                lucky = self.ask(player_number, choice)
 
             else:
                 raise ValueError("Invalid player type")
-
+            
             self.is_family_scored()
+            if not len(self.hands[player_number]) or self.is_game_over():
+                return #Player has no cards, he can't play or game over
 
-            if len(self.hands[player_number]) == 0:
-                return #Player has no cards, he can't play
 
             if lucky and self.verbose : print("Player", player_number, "got lucky and can play again\n")
 
@@ -282,20 +295,24 @@ class game:
 
 
     def deal_other_hands_v2(self, player_number, deck):
-        newhands = [[] for _ in range(len(self.hands))]
+        newhands = [[] for _ in range(self.nb_players)]
 
         # First add known cards to hands
         for family in range(self.nb_families):
             for person in range(self.nb_people_per_family):
                 owner = self.card_tracker[family, person]
-                if owner >= 0:
+                if owner > -1 and owner != player_number:
                     newhands[owner].append([family, person])
+
+        newhands[player_number] = self.hands[player_number].copy()
 
         for player, hand in enumerate(self.hands):
             if player == player_number:
-                newhands[player_number] = hand.copy()
                 continue
-            
+                
+            if not len(deck): 
+                break
+
             candidate_cards = []
             candidate_weights = []
             for card in deck :
@@ -307,14 +324,14 @@ class game:
 
             p = candidate_weights/np.sum(candidate_weights)
 
-            if p.sum() - 1> 0.001 or p.sum() - 1 < -0.001:
+            if abs(p.sum() - 1)> 0.001 :
                 print("P :",p)
                 print("Sum :", p.sum())
                 raise ValueError("problem non 1 probability sum")
 
             added_cards_indices = np.random.choice(len(candidate_cards), remanining_cards_to_add, p = candidate_weights/np.sum(candidate_weights), replace = False)
-            added_cards = [candidate_cards[i] for i in added_cards_indices]
-            for card in added_cards:
+            for i in added_cards_indices:
+                card = candidate_cards[i]
                 newhands[player].append(card)
                 deck.remove(card)
         
@@ -322,7 +339,7 @@ class game:
 
     def play_game(self):
         turn = 0
-        max_turns = 10e6
+        max_turns = 10e5
         while turn < max_turns:
             player = turn % self.nb_players
             self.play_turn(player)
@@ -330,12 +347,14 @@ class game:
             
             if self.is_game_over() :
                 scores = self.compute_scores()
-                if self.verbose : print("Game over! Scores :", scores)
+                if self.verbose : 
+                    print("Game over! Scores :", scores)
+                    print("Final hands :", self.hands)
 
                 return scores
                 
         if self.verbose : print('Game over because too long')
-        return -1
+        raise ValueError("Game over because too long")
     
     def converge_beliefs(self):
         self.beliefs += 0.1 * (self.beliefs.mean() - self.beliefs)

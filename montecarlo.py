@@ -2,7 +2,7 @@ import numpy as np
 import game
 from copy import deepcopy
 
-params = {"selection_method" : "weighted"} # Can be "uniform", "weighted" or "greedy
+params = {"selection_method" : "greedy"} # Can be "uniform", "weighted" or "greedy"
 
 VERBOSE = False
 
@@ -194,3 +194,13 @@ class simulation:
             return (card[0] == asked_family and card[1] == asked_card)
 
         return False
+    
+    def pimc(self, player_number):
+        for player in range(self.nb_players):
+            if player == player_number : continue
+            for family in range(self.nb_families):
+                for card in range(game.params["nb_people_per_family"]):
+                    if self.hands[player, family, card]:
+                        self.ask_chosen(player_number, (player, family, card))
+        
+        return self.compute_scores()

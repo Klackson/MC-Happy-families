@@ -25,23 +25,60 @@ def enumerate_moves(instance, player_number):
 
 
 def choose_move(instance , player_number, verbose = True):
-    starttime = time.time()
-
     moves = enumerate_moves(instance, player_number)
 
     search_data = np.empty((params["nb_simulations"], len(moves)))
 
     for i in range(params["nb_simulations"]):
-        assumed_hands, assumed_pile = instance.assume_game_state(player_number)
+        assumed_hands, assumed_pile = instance.assume_game_state_v2(player_number)
         
         for j, move in enumerate(moves):
-            simulation = montecarlo.simulation(copy.deepcopy(assumed_hands), copy.deepcopy(assumed_pile), instance.families_scored.copy())
+            try :
+                simulation = montecarlo.simulation(copy.deepcopy(assumed_hands), copy.deepcopy(assumed_pile), instance.families_scored.copy())
+            except:
+                print("Error in simulation")
+                print("True hands :",instance.hands)
+                print("True pile :", instance.pile)
+                print("--------------------")
+                print("Assumed hands :", assumed_hands)
+                print("Assumed pile :", assumed_pile)
+
             lucky = simulation.ask_chosen(player_number, move)
 
             search_data[i,j] = simulation.playout(player_number, lucky)[player_number] # Only retrieves score for the player for now
 
     mean_scores = np.mean(search_data, axis=0)
 
-    if verbose : print("Runtime :", time.time() - starttime)
+
+    return moves[np.argmax(mean_scores)] # Simplified UCB
+
+
+def choose_move_pimc(instance , player_number, verbose = True):
+    moves = enumerate_moves(instance, player_number)
+
+    search_data = np.empty((params["nb_simulations"], len(moves)))
+
+    for i in range(params["nb_simulations"]):
+        assumed_hands, assumed_pile = instance.assume_game_state_v2(player_number)
+        
+        for j, move in enumerate(moves):
+            try :
+                simulation = montecarlo.simulation(copy.deepcopy(assumed_hands), copy.deepcopy(assumed_pile), instance.families_scored.copy())
+            except:
+                print("Player number :", player_number)
+                print("True hands :",instance.hands)
+                print("True pile :", instance.pile)
+                print("--------------------")
+                print("Assumed hands :", assumed_hands)
+                print("Assumed pile :", assumed_pile)
+                raise ValueError("Error in simulation")
+            
+            lucky = simulation.ask_chosen(player_number, move)
+
+            playing_player = (player_number + (not lucky)) % instance.nb_players
+
+            search_data[i,j] = simulation.pimc(playing_player)[player_number] # Only retrieves score for the player for now
+
+    mean_scores = np.mean(search_data, axis=0)
 
     return moves[np.argmax(mean_scores)] # Simplified UCB
