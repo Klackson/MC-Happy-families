@@ -23,6 +23,3 @@ When an AI needs to pick a move, it first **samples a plausible world**: it know
 **SmarterAI** — same as NestedAI but uses the belief-weighted world sampling (v2) at both levels instead of uniform random, and applies a softmax temperature on scores to soften argmax decisions.
 
 Results of head-to-head matchups are logged in the `.txt` files in the repo.
-
-## Stack
-Python · NumPy
